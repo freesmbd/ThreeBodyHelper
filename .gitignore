@@ -16,6 +16,13 @@ Media/Voice/*.ogg
 Media/Voice/*.mp3
 !Media/Voice/README.txt
 !Media/Voice/wan_bu_liao_la.ogg
+!Media/Voice/chong_feng.ogg
+!Media/Voice/huan_hu.ogg
+!Media/Voice/bei_shang_xiao_hao.ogg
+!Media/Voice/tian_huo_tian_huo.ogg
+!Media/Voice/bai_tuo_shui_qu_sha_le_ta_ba.ogg
+!Media/Voice/piao_liang.ogg
+!Media/Voice/dui_you_ne.ogg
 
 # OS/editor noise
 .DS_Store

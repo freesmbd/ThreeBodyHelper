@@ -30,6 +30,13 @@ Open the wheel with one of:
 /mqqwheel
 ```
 
+Open voice wheel settings with:
+
+```text
+/mqq voice config
+/mqq voice options
+```
+
 The voice wheel sends only phrase IDs over addon messages. Teammates must install the same addon and sound pack to hear the same custom audio.
 
 Current built-in sync identity:
@@ -40,7 +47,8 @@ payload: VW1\t<packId>\t<phraseId>
 example: VW1\tthreebody-default-v1\twan_bu_liao_la
 ```
 
-Receivers use the same local catalog to resolve `wan_bu_liao_la` to `Media\Voice\wan_bu_liao_la.ogg`.
+Receivers use the same local catalog to resolve phrase ids to local files such as `Media\Voice\wan_bu_liao_la.ogg`.
+The first built-in voice pack contains 8 wheel entries: `wan_bu_liao_la`, `chong_feng`, `huan_hu`, `bei_shang_xiao_hao`, `tian_huo_tian_huo`, `bai_tuo_shui_qu_sha_le_ta_ba`, `piao_liang`, and `dui_you_ne`.
 
 Useful commands:
 
@@ -59,6 +67,8 @@ Useful commands:
 /mqq voice status
 /mqq voice cooldown global|sender|send seconds
 ```
+
+The settings panel covers the same core options as the commands: receive sync, send sync, chat text, text channel, sound channel, scale, layout reset, and cooldowns.
 
 `/mqq voice text ...` controls the single selected channel used for normal chat text when a wheel entry is sent. Addon sync still uses party/raid/instance addon messages so teammates with the same addon can play local audio.
 

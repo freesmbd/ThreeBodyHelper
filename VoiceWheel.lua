@@ -15,14 +15,24 @@ local ADDON_PATH = "Interface\\AddOns\\ThreeBodyHelper\\"
 
 local PHRASE_CATALOG = {
     { id = "wan_bu_liao_la", label = "玩不了啦", text = "玩不了啦", file = "Media\\Voice\\wan_bu_liao_la.ogg" },
-    { id = "ready", label = "到目前为止感觉是人机难度", text = "到目前为止感觉是人机难度", file = "", soundKitID = 8959 },
-    { id = "pull", label = "Pull", text = "开怪", file = "", soundKitID = 8959 },
-    { id = "move", label = "Move", text = "走位", file = "", soundKitID = 8959 },
-    { id = "spread", label = "Spread", text = "分散", file = "", soundKitID = 8959 },
-    { id = "stack", label = "Stack", text = "集合", file = "", soundKitID = 8959 },
-    { id = "interrupt", label = "Kick", text = "打断", file = "", soundKitID = 8959 },
-    { id = "defensive", label = "Def", text = "开减伤", file = "", soundKitID = 8959 },
-    { id = "fun", label = "Nice", text = "好活", file = "", soundKitID = 8959 },
+    { id = "chong_feng", label = "冲锋", text = "冲锋", file = "Media\\Voice\\chong_feng.ogg" },
+    { id = "huan_hu", label = "欢呼", text = "欢呼", file = "Media\\Voice\\huan_hu.ogg" },
+    { id = "bei_shang_xiao_hao", label = "悲伤小号", text = "悲伤小号", file = "Media\\Voice\\bei_shang_xiao_hao.ogg" },
+    { id = "tian_huo_tian_huo", label = "天火天火", text = "天火天火", file = "Media\\Voice\\tian_huo_tian_huo.ogg" },
+    { id = "bai_tuo_shui_qu_sha_le_ta_ba", label = "拜托谁去杀了他吧", text = "拜托谁去杀了他吧", file = "Media\\Voice\\bai_tuo_shui_qu_sha_le_ta_ba.ogg" },
+    { id = "piao_liang", label = "漂亮", text = "漂亮", file = "Media\\Voice\\piao_liang.ogg" },
+    { id = "dui_you_ne", label = "队友呢", text = "队友呢", file = "Media\\Voice\\dui_you_ne.ogg" },
+}
+
+local RETIRED_CATALOG_IDS = {
+    ready = true,
+    pull = true,
+    move = true,
+    spread = true,
+    stack = true,
+    interrupt = true,
+    defensive = true,
+    fun = true,
 }
 
 local DEFAULTS = {
@@ -52,6 +62,8 @@ local lastSendAt = -100
 local lastGlobalReceiveAt = -100
 local lastSenderReceiveAt = {}
 local wheel
+local optionsFrame
+local optionControls = {}
 local Print
 
 local function CopyDefaults(src, dst)
@@ -111,7 +123,7 @@ local function SyncCatalogPhrases()
         if type(phrase) == "table" then
             local phraseId = phrase.id
             if phraseId and phraseId ~= "" then
-                if not includedIds[phraseId] then
+                if not includedIds[phraseId] and not RETIRED_CATALOG_IDS[phraseId] then
                     table.insert(synced, phrase)
                     includedIds[phraseId] = true
                 end
@@ -575,6 +587,212 @@ function VoiceWheel.ResetPosition(resetScale)
     Print("voice wheel layout reset")
 end
 
+local TEXT_CHANNEL_OPTIONS = { "AUTO", "SAY", "PARTY", "RAID", "INSTANCE_CHAT", "GUILD" }
+local SOUND_CHANNEL_OPTIONS = { "Dialog", "Master", "SFX", "Music", "Ambience" }
+
+local function NextOption(options, current)
+    for index, value in ipairs(options) do
+        if value == current then
+            return options[(index % #options) + 1]
+        end
+    end
+    return options[1]
+end
+
+local function CreateOptionsCheckbox(parent, label, y, getter, setter)
+    local check = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
+    check:SetPoint("TOPLEFT", 22, y)
+    check.Text:SetText(label)
+    check:SetScript("OnClick", function(self)
+        setter(self:GetChecked())
+        VoiceWheel.RefreshOptions()
+    end)
+    table.insert(optionControls, function()
+        check:SetChecked(getter())
+    end)
+end
+
+local function CreateOptionsCycleButton(parent, label, y, getter, setter)
+    local text = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    text:SetPoint("TOPLEFT", 26, y - 7)
+    text:SetText(label)
+
+    local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    button:SetSize(150, 24)
+    button:SetPoint("TOPLEFT", 180, y)
+    button:SetScript("OnClick", function()
+        setter(getter())
+        VoiceWheel.RefreshOptions()
+    end)
+    table.insert(optionControls, function()
+        button:SetText(tostring(getter()))
+    end)
+end
+
+local function CreateOptionsNumber(parent, label, y, getter, setter)
+    local text = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    text:SetPoint("TOPLEFT", 26, y - 7)
+    text:SetText(label)
+
+    local editBox = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+    editBox:SetSize(74, 24)
+    editBox:SetPoint("TOPLEFT", 180, y)
+    editBox:SetAutoFocus(false)
+    editBox:SetNumeric(false)
+    editBox:SetScript("OnEnterPressed", function(self)
+        setter(self:GetText())
+        self:ClearFocus()
+        VoiceWheel.RefreshOptions()
+    end)
+    editBox:SetScript("OnEscapePressed", function(self)
+        self:ClearFocus()
+        VoiceWheel.RefreshOptions()
+    end)
+
+    local applyButton = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    applyButton:SetSize(58, 24)
+    applyButton:SetPoint("LEFT", editBox, "RIGHT", 10, 0)
+    applyButton:SetText("应用")
+    applyButton:SetScript("OnClick", function()
+        setter(editBox:GetText())
+        editBox:ClearFocus()
+        VoiceWheel.RefreshOptions()
+    end)
+
+    table.insert(optionControls, function()
+        editBox:SetText(tostring(getter()))
+    end)
+end
+
+local function EnsureOptionsFrame()
+    if optionsFrame then
+        return optionsFrame
+    end
+
+    optionsFrame = CreateFrame("Frame", "ThreeBodyHelperVoiceOptionsFrame", UIParent, "BasicFrameTemplateWithInset")
+    optionsFrame:SetSize(390, 470)
+    optionsFrame:SetPoint("CENTER")
+    optionsFrame:SetFrameStrata("DIALOG")
+    optionsFrame:EnableMouse(true)
+    optionsFrame:SetMovable(true)
+    optionsFrame:RegisterForDrag("LeftButton")
+    optionsFrame:SetScript("OnDragStart", function(self)
+        self:StartMoving()
+    end)
+    optionsFrame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+    end)
+    optionsFrame:Hide()
+
+    optionsFrame.title = optionsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+    optionsFrame.title:SetPoint("TOPLEFT", 16, -10)
+    optionsFrame.title:SetText("ThreeBodyHelper 语音轮盘设置")
+
+    CreateOptionsCheckbox(optionsFrame, "接收队友同步语音", -48, function()
+        return db.receiveEnabled
+    end, function(value)
+        db.receiveEnabled = value and true or false
+    end)
+
+    CreateOptionsCheckbox(optionsFrame, "发送队友同步消息", -82, function()
+        return db.syncEnabled
+    end, function(value)
+        db.syncEnabled = value and true or false
+    end)
+
+    CreateOptionsCheckbox(optionsFrame, "触发时发送聊天文字", -116, function()
+        return db.sendText
+    end, function(value)
+        db.sendText = value and true or false
+    end)
+
+    CreateOptionsCheckbox(optionsFrame, "自己本地播放语音", -150, function()
+        return db.selfPlay
+    end, function(value)
+        db.selfPlay = value and true or false
+    end)
+
+    CreateOptionsCycleButton(optionsFrame, "文字频道", -196, function()
+        return db.textChannel or DEFAULTS.textChannel
+    end, function(current)
+        db.textChannel = NextOption(TEXT_CHANNEL_OPTIONS, current)
+    end)
+
+    CreateOptionsCycleButton(optionsFrame, "声音通道", -230, function()
+        return db.soundChannel or DEFAULTS.soundChannel
+    end, function(current)
+        db.soundChannel = NextOption(SOUND_CHANNEL_OPTIONS, current)
+    end)
+
+    CreateOptionsNumber(optionsFrame, "轮盘缩放", -276, function()
+        return db.scale or DEFAULTS.scale
+    end, function(value)
+        VoiceWheel.SetScale(value)
+    end)
+
+    CreateOptionsNumber(optionsFrame, "发送冷却", -310, function()
+        return db.sendCooldown or DEFAULTS.sendCooldown
+    end, function(value)
+        VoiceWheel.SetCooldown("send", value)
+    end)
+
+    CreateOptionsNumber(optionsFrame, "全局接收冷却", -344, function()
+        return db.globalReceiveCooldown or DEFAULTS.globalReceiveCooldown
+    end, function(value)
+        VoiceWheel.SetCooldown("global", value)
+    end)
+
+    CreateOptionsNumber(optionsFrame, "单人接收冷却", -378, function()
+        return db.senderReceiveCooldown or DEFAULTS.senderReceiveCooldown
+    end, function(value)
+        VoiceWheel.SetCooldown("sender", value)
+    end)
+
+    local resetPosButton = CreateFrame("Button", nil, optionsFrame, "UIPanelButtonTemplate")
+    resetPosButton:SetSize(100, 24)
+    resetPosButton:SetPoint("BOTTOMLEFT", 24, 18)
+    resetPosButton:SetText("重置位置")
+    resetPosButton:SetScript("OnClick", function()
+        VoiceWheel.ResetPosition(false)
+        VoiceWheel.RefreshOptions()
+    end)
+
+    local resetLayoutButton = CreateFrame("Button", nil, optionsFrame, "UIPanelButtonTemplate")
+    resetLayoutButton:SetSize(112, 24)
+    resetLayoutButton:SetPoint("LEFT", resetPosButton, "RIGHT", 12, 0)
+    resetLayoutButton:SetText("重置布局")
+    resetLayoutButton:SetScript("OnClick", function()
+        VoiceWheel.ResetPosition(true)
+        VoiceWheel.RefreshOptions()
+    end)
+
+    local closeButton = CreateFrame("Button", nil, optionsFrame, "UIPanelButtonTemplate")
+    closeButton:SetSize(76, 24)
+    closeButton:SetPoint("LEFT", resetLayoutButton, "RIGHT", 12, 0)
+    closeButton:SetText("关闭")
+    closeButton:SetScript("OnClick", function()
+        optionsFrame:Hide()
+    end)
+
+    return optionsFrame
+end
+
+function VoiceWheel.RefreshOptions()
+    for _, updater in ipairs(optionControls) do
+        updater()
+    end
+end
+
+function VoiceWheel.ShowOptions()
+    if not db then
+        return
+    end
+
+    EnsureOptionsFrame()
+    VoiceWheel.RefreshOptions()
+    optionsFrame:Show()
+end
+
 function VoiceWheel.HandleSlash(input)
     input = strtrim(input or "")
     local command, rest = input:match("^(%S*)%s*(.-)$")
@@ -583,6 +801,11 @@ function VoiceWheel.HandleSlash(input)
 
     if command == "" or command == "show" or command == "toggle" then
         VoiceWheel.Toggle()
+        return
+    end
+
+    if command == "config" or command == "options" or command == "settings" then
+        VoiceWheel.ShowOptions()
         return
     end
 
@@ -710,6 +933,7 @@ function VoiceWheel.HandleSlash(input)
     end
 
     Print("/mqq voice - open wheel")
+    Print("/mqq voice config - open settings panel")
     Print("/mqq voice receive on|off - allow/block teammates' synced voice")
     Print("/mqq voice sync on|off - send addon sync to group")
     Print("/mqq voice text on|off - send normal chat text")
@@ -720,7 +944,7 @@ function VoiceWheel.HandleSlash(input)
     Print("/mqq voice pos x y - set wheel center offset")
     Print("/mqq voice center|resetpos|resetlayout - reset layout")
     Print("/mqq voice cooldown global|sender|send seconds")
-    Print("/mqq voice send 1-9 - trigger a phrase")
+    Print("/mqq voice send 1-8 - trigger a phrase")
 end
 
 local function HandleAddonMessage(prefix, message, channel, sender)
