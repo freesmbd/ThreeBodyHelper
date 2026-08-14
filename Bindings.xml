@@ -1,0 +1,7 @@
+<Bindings>
+    <Binding name="THREEBODYHELPER_VOICEWHEEL_TOGGLE" header="ThreeBodyHelper" category="ThreeBodyHelper">
+        if ThreeBodyHelper and ThreeBodyHelper.VoiceWheel then
+            ThreeBodyHelper.VoiceWheel.Toggle()
+        end
+    </Binding>
+</Bindings>

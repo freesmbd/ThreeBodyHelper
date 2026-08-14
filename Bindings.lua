@@ -1,0 +1,2 @@
+_G.BINDING_HEADER_ThreeBodyHelper = "ThreeBodyHelper"
+_G.BINDING_NAME_THREEBODYHELPER_VOICEWHEEL_TOGGLE = "Open voice wheel"
