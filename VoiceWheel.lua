@@ -24,6 +24,7 @@ local DEFAULTS = {
     senderReceiveCooldown = 6.0,
     packId = "default",
     channel = "AUTO",
+    textChannel = "AUTO",
     phrases = {
         { id = "ready", label = "到目前为止感觉是人机难度", text = "到目前为止感觉是人机难度", file = "", soundKitID = 8959 },
         { id = "pull", label = "Pull", text = "开怪", file = "", soundKitID = 8959 },
@@ -104,6 +105,36 @@ local function GetAddonChannel()
     return nil
 end
 
+local function GetTextChannel()
+    local channel = db and db.textChannel or "AUTO"
+    if channel == "SAY" then
+        return "SAY"
+    end
+    if channel == "GUILD" then
+        return IsInGuild() and "GUILD" or nil
+    end
+    if channel == "PARTY" then
+        return IsInGroup(LE_PARTY_CATEGORY_INSTANCE) and "INSTANCE_CHAT" or (IsInGroup() and "PARTY" or nil)
+    end
+    if channel == "RAID" then
+        return IsInRaid() and "RAID" or nil
+    end
+    if channel == "INSTANCE_CHAT" then
+        return IsInGroup(LE_PARTY_CATEGORY_INSTANCE) and "INSTANCE_CHAT" or nil
+    end
+
+    if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+        return "INSTANCE_CHAT"
+    end
+    if IsInRaid() then
+        return "RAID"
+    end
+    if IsInGroup() then
+        return "PARTY"
+    end
+    return "SAY"
+end
+
 local function PlayPhrase(phrase)
     if not phrase then
         return false
@@ -133,7 +164,7 @@ local function SendPhraseText(phrase)
         return
     end
 
-    local channel = GetAddonChannel()
+    local channel = GetTextChannel()
     if channel then
         SendChatMessage(phrase.text, channel)
     else
@@ -332,6 +363,28 @@ function VoiceWheel.SetTextEnabled(value)
     Print("send voice wheel text: " .. (db.sendText and "on" or "off"))
 end
 
+local function NormalizeTextChannel(channel)
+    channel = string.upper(strtrim(channel or ""))
+    if channel == "INSTANCE" or channel == "INSTANCE_CHAT" or channel == "I" then
+        return "INSTANCE_CHAT"
+    end
+    if channel == "AUTO" or channel == "SAY" or channel == "PARTY" or channel == "RAID" or channel == "GUILD" then
+        return channel
+    end
+    return nil
+end
+
+function VoiceWheel.SetTextChannel(channel)
+    channel = NormalizeTextChannel(channel)
+    if not channel then
+        Print("text channel: auto, say, party, raid, instance, guild")
+        return
+    end
+
+    db.textChannel = channel
+    Print("voice wheel text channel = " .. channel)
+end
+
 function VoiceWheel.SetCooldown(kind, seconds)
     seconds = tonumber(seconds)
     if not seconds or seconds < 0 then
@@ -399,8 +452,20 @@ function VoiceWheel.HandleSlash(input)
             VoiceWheel.SetTextEnabled(true)
         elseif rest == "off" then
             VoiceWheel.SetTextEnabled(false)
+        elseif rest ~= "" then
+            VoiceWheel.SetTextChannel(rest)
         else
             Print("send voice wheel text: " .. (db.sendText and "on" or "off"))
+            Print("voice wheel text channel: " .. tostring(db.textChannel or "AUTO"))
+        end
+        return
+    end
+
+    if command == "textchannel" or command == "text-channel" or command == "txtchan" then
+        if rest == "" then
+            Print("voice wheel text channel: " .. tostring(db.textChannel or "AUTO"))
+        else
+            VoiceWheel.SetTextChannel(rest)
         end
         return
     end
@@ -408,6 +473,7 @@ function VoiceWheel.HandleSlash(input)
     if command == "status" then
         Print("enabled=" .. tostring(db.enabled) .. ", receive=" .. tostring(db.receiveEnabled)
             .. ", sync=" .. tostring(db.syncEnabled) .. ", text=" .. tostring(db.sendText))
+        Print("text channel=" .. tostring(db.textChannel or "AUTO"))
         Print("cooldowns: send=" .. tostring(db.sendCooldown)
             .. "s, global=" .. tostring(db.globalReceiveCooldown)
             .. "s, sender=" .. tostring(db.senderReceiveCooldown) .. "s")
@@ -424,6 +490,7 @@ function VoiceWheel.HandleSlash(input)
     Print("/mqq voice receive on|off - allow/block teammates' synced voice")
     Print("/mqq voice sync on|off - send addon sync to group")
     Print("/mqq voice text on|off - send normal chat text")
+    Print("/mqq voice text auto|say|party|raid|instance|guild - set text channel")
     Print("/mqq voice cooldown global|sender|send seconds")
     Print("/mqq voice send 1-8 - trigger a phrase")
 end

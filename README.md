@@ -38,9 +38,12 @@ Useful commands:
 /mqq voice receive on|off
 /mqq voice sync on|off
 /mqq voice text on|off
+/mqq voice text auto|say|party|raid|instance|guild
 /mqq voice status
 /mqq voice cooldown global|sender|send seconds
 ```
+
+`/mqq voice text ...` controls the single selected channel used for normal chat text when a wheel entry is sent. Addon sync still uses party/raid/instance addon messages so teammates with the same addon can play local audio.
 
 ## Custom Voice Files
 
