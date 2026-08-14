@@ -15,6 +15,7 @@ Logs/
 Media/Voice/*.ogg
 Media/Voice/*.mp3
 !Media/Voice/README.txt
+!Media/Voice/wan_bu_liao_la.ogg
 
 # OS/editor noise
 .DS_Store
