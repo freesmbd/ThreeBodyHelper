@@ -70,6 +70,8 @@ Then point phrase entries to paths such as:
 Media\Voice\wan_bu_liao_la.ogg
 ```
 
+`soundKitID` is optional and only used as a fallback built-in WoW sound when a phrase has no playable custom file.
+
 Do not include copyrighted voice assets unless you have the right to redistribute them.
 
 ## License

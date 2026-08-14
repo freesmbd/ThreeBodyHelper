@@ -12,3 +12,6 @@ Media\Voice\wan_bu_liao_la.ogg
 
 Addon sync sends only pack id + phrase id. Everyone who should hear a custom
 clip needs the same local file at the mapped path.
+
+soundKitID is optional. It is only a fallback built-in WoW sound for phrases
+that do not have a custom local file or whose file fails to play.

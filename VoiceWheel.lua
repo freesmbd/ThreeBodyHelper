@@ -14,7 +14,7 @@ local MESSAGE_VERSION = "VW1"
 local ADDON_PATH = "Interface\\AddOns\\ThreeBodyHelper\\"
 
 local PHRASE_CATALOG = {
-    { id = "wan_bu_liao_la", label = "玩不了啦", text = "玩不了啦", file = "Media\\Voice\\wan_bu_liao_la.ogg", soundKitID = 8959 },
+    { id = "wan_bu_liao_la", label = "玩不了啦", text = "玩不了啦", file = "Media\\Voice\\wan_bu_liao_la.ogg" },
     { id = "ready", label = "到目前为止感觉是人机难度", text = "到目前为止感觉是人机难度", file = "", soundKitID = 8959 },
     { id = "pull", label = "Pull", text = "开怪", file = "", soundKitID = 8959 },
     { id = "move", label = "Move", text = "走位", file = "", soundKitID = 8959 },
