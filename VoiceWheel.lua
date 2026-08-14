@@ -37,6 +37,9 @@ local DEFAULTS = {
     packId = "threebody-default-v1",
     channel = "AUTO",
     textChannel = "AUTO",
+    scale = 1.0,
+    pointX = 0,
+    pointY = 0,
     phrases = PHRASE_CATALOG,
 }
 
@@ -47,6 +50,8 @@ local selectedIndex = nil
 local lastSendAt = -100
 local lastGlobalReceiveAt = -100
 local lastSenderReceiveAt = {}
+local wheel
+local Print
 
 local function CopyDefaults(src, dst)
     if type(dst) ~= "table" then
@@ -62,6 +67,20 @@ local function CopyDefaults(src, dst)
     end
 
     return dst
+end
+
+local function Clamp(value, minValue, maxValue)
+    value = tonumber(value)
+    if not value then
+        return nil
+    end
+    if value < minValue then
+        return minValue
+    end
+    if value > maxValue then
+        return maxValue
+    end
+    return value
 end
 
 local function SyncCatalogPhrases()
@@ -104,7 +123,37 @@ local function SyncCatalogPhrases()
     db.phrases = synced
 end
 
-local function Print(message)
+local function ApplyWheelPlacement()
+    if not wheel or not db then
+        return
+    end
+
+    db.scale = Clamp(db.scale, 0.6, 1.6) or DEFAULTS.scale
+    db.pointX = tonumber(db.pointX) or DEFAULTS.pointX
+    db.pointY = tonumber(db.pointY) or DEFAULTS.pointY
+
+    wheel:SetScale(db.scale)
+    wheel:ClearAllPoints()
+    wheel:SetPoint("CENTER", UIParent, "CENTER", db.pointX, db.pointY)
+end
+
+local function SaveWheelPosition()
+    if not wheel or not db then
+        return
+    end
+
+    local wheelX, wheelY = wheel:GetCenter()
+    local parentX, parentY = UIParent:GetCenter()
+    if not wheelX or not wheelY or not parentX or not parentY then
+        return
+    end
+
+    db.pointX = math.floor((wheelX - parentX) + 0.5)
+    db.pointY = math.floor((wheelY - parentY) + 0.5)
+    Print("voice wheel center = " .. db.pointX .. ", " .. db.pointY)
+end
+
+function Print(message)
     if DEFAULT_CHAT_FRAME then
         DEFAULT_CHAT_FRAME:AddMessage("|cff66ccffThreeBodyHelper Voice|r " .. tostring(message))
     end
@@ -258,15 +307,24 @@ local function SelectPhrase(index, fromRemote)
     SendPhraseSync(phrase)
 end
 
-local wheel = CreateFrame("Frame", "ThreeBodyHelperVoiceWheelFrame", UIParent)
+wheel = CreateFrame("Frame", "ThreeBodyHelperVoiceWheelFrame", UIParent)
 wheel:SetSize(560, 560)
 wheel:SetPoint("CENTER")
 wheel:SetFrameStrata("DIALOG")
 wheel:EnableMouse(true)
+wheel:SetMovable(true)
+wheel:RegisterForDrag("LeftButton")
 wheel:SetScript("OnMouseDown", function(_, button)
     if button == "RightButton" then
         wheel:Hide()
     end
+end)
+wheel:SetScript("OnDragStart", function()
+    wheel:StartMoving()
+end)
+wheel:SetScript("OnDragStop", function()
+    wheel:StopMovingOrSizing()
+    SaveWheelPosition()
 end)
 wheel:Hide()
 
@@ -282,8 +340,8 @@ end
 wheel.centerText:SetText("语音轮盘")
 
 wheel.centerSubText = wheel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-wheel.centerSubText:SetPoint("TOP", wheel.centerText, "BOTTOM", 0, -8)
-wheel.centerSubText:SetText("点击发送，右键关闭")
+    wheel.centerSubText:SetPoint("TOP", wheel.centerText, "BOTTOM", 0, -8)
+wheel.centerSubText:SetText("点击发送，拖动改位置，右键关闭")
 
 local function HighlightSelected(index)
     selectedIndex = index
@@ -449,6 +507,42 @@ function VoiceWheel.SetCooldown(kind, seconds)
     Print("voice wheel " .. kind .. " cooldown = " .. seconds .. "s")
 end
 
+function VoiceWheel.SetScale(value)
+    value = Clamp(value, 0.6, 1.6)
+    if not value then
+        Print("scale must be a number from 0.6 to 1.6")
+        return
+    end
+
+    db.scale = value
+    ApplyWheelPlacement()
+    Print("voice wheel scale = " .. db.scale)
+end
+
+function VoiceWheel.SetPosition(x, y)
+    x = tonumber(x)
+    y = tonumber(y)
+    if not x or not y then
+        Print("position must be two numbers, for example: /mqq voice pos 0 120")
+        return
+    end
+
+    db.pointX = math.floor(x + 0.5)
+    db.pointY = math.floor(y + 0.5)
+    ApplyWheelPlacement()
+    Print("voice wheel center = " .. db.pointX .. ", " .. db.pointY)
+end
+
+function VoiceWheel.ResetPosition(resetScale)
+    db.pointX = DEFAULTS.pointX
+    db.pointY = DEFAULTS.pointY
+    if resetScale then
+        db.scale = DEFAULTS.scale
+    end
+    ApplyWheelPlacement()
+    Print("voice wheel layout reset")
+end
+
 function VoiceWheel.HandleSlash(input)
     input = strtrim(input or "")
     local command, rest = input:match("^(%S*)%s*(.-)$")
@@ -518,6 +612,8 @@ function VoiceWheel.HandleSlash(input)
             .. ", sync=" .. tostring(db.syncEnabled) .. ", text=" .. tostring(db.sendText))
         Print("pack=" .. tostring(db.packId or DEFAULTS.packId))
         Print("text channel=" .. tostring(db.textChannel or "AUTO"))
+        Print("layout: scale=" .. tostring(db.scale or DEFAULTS.scale)
+            .. ", center=" .. tostring(db.pointX or 0) .. "," .. tostring(db.pointY or 0))
         Print("cooldowns: send=" .. tostring(db.sendCooldown)
             .. "s, global=" .. tostring(db.globalReceiveCooldown)
             .. "s, sender=" .. tostring(db.senderReceiveCooldown) .. "s")
@@ -528,6 +624,40 @@ function VoiceWheel.HandleSlash(input)
         for index, phrase in ipairs(db.phrases or {}) do
             Print(index .. ". " .. tostring(phrase.id or "?") .. " -> " .. tostring(phrase.file or ""))
         end
+        return
+    end
+
+    if command == "scale" or command == "size" then
+        if rest == "" then
+            Print("voice wheel scale = " .. tostring(db.scale or DEFAULTS.scale))
+        else
+            VoiceWheel.SetScale(rest)
+        end
+        return
+    end
+
+    if command == "pos" or command == "position" then
+        local x, y = rest:match("^([%-%d%.]+)%s+([%-%d%.]+)$")
+        if x and y then
+            VoiceWheel.SetPosition(x, y)
+        else
+            Print("voice wheel center = " .. tostring(db.pointX or 0) .. ", " .. tostring(db.pointY or 0))
+        end
+        return
+    end
+
+    if command == "center" then
+        VoiceWheel.SetPosition(0, 0)
+        return
+    end
+
+    if command == "resetpos" or command == "resetposition" then
+        VoiceWheel.ResetPosition(false)
+        return
+    end
+
+    if command == "resetlayout" then
+        VoiceWheel.ResetPosition(true)
         return
     end
 
@@ -543,6 +673,9 @@ function VoiceWheel.HandleSlash(input)
     Print("/mqq voice text on|off - send normal chat text")
     Print("/mqq voice text auto|say|party|raid|instance|guild - set text channel")
     Print("/mqq voice list - show phrase ids and local files")
+    Print("/mqq voice scale 0.6-1.6 - set wheel scale")
+    Print("/mqq voice pos x y - set wheel center offset")
+    Print("/mqq voice center|resetpos|resetlayout - reset layout")
     Print("/mqq voice cooldown global|sender|send seconds")
     Print("/mqq voice send 1-9 - trigger a phrase")
 end
@@ -600,6 +733,7 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         end
         SyncCatalogPhrases()
         RebuildPhraseLookup()
+        ApplyWheelPlacement()
         if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
             C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
         end

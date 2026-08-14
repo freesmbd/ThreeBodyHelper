@@ -50,11 +50,18 @@ Useful commands:
 /mqq voice text on|off
 /mqq voice text auto|say|party|raid|instance|guild
 /mqq voice list
+/mqq voice scale 0.6-1.6
+/mqq voice pos x y
+/mqq voice center
+/mqq voice resetpos
+/mqq voice resetlayout
 /mqq voice status
 /mqq voice cooldown global|sender|send seconds
 ```
 
 `/mqq voice text ...` controls the single selected channel used for normal chat text when a wheel entry is sent. Addon sync still uses party/raid/instance addon messages so teammates with the same addon can play local audio.
+
+The wheel position and scale are saved per account. Drag the wheel background to move it, or use `pos x y` to set its center offset from screen center. `resetpos` only recenters the wheel; `resetlayout` resets both position and scale.
 
 ## Custom Voice Files
 
