@@ -37,6 +37,7 @@ local DEFAULTS = {
     packId = "threebody-default-v1",
     channel = "AUTO",
     textChannel = "AUTO",
+    soundChannel = "Dialog",
     scale = 1.0,
     pointX = 0,
     pointY = 0,
@@ -237,14 +238,14 @@ local function PlayPhrase(phrase)
         if not path:find("^Interface\\", 1, false) and not path:find("^Interface/", 1, false) then
             path = ADDON_PATH .. phrase.file
         end
-        local ok, willPlay = pcall(PlaySoundFile, path, phrase.channel or "Master")
+        local ok, willPlay = pcall(PlaySoundFile, path, phrase.channel or db.soundChannel or DEFAULTS.soundChannel)
         if ok and willPlay then
             return true
         end
     end
 
     if phrase.soundKitID and PlaySound then
-        local ok, willPlay = pcall(PlaySound, phrase.soundKitID, phrase.channel or "Master")
+        local ok, willPlay = pcall(PlaySound, phrase.soundKitID, phrase.channel or db.soundChannel or DEFAULTS.soundChannel)
         return ok and willPlay
     end
 
@@ -475,6 +476,26 @@ local function NormalizeTextChannel(channel)
     return nil
 end
 
+local function NormalizeSoundChannel(channel)
+    channel = string.upper(strtrim(channel or ""))
+    if channel == "MASTER" then
+        return "Master"
+    end
+    if channel == "SFX" or channel == "SOUND" or channel == "EFFECT" or channel == "EFFECTS" then
+        return "SFX"
+    end
+    if channel == "DIALOG" or channel == "DIALOGUE" or channel == "VOICE" then
+        return "Dialog"
+    end
+    if channel == "MUSIC" then
+        return "Music"
+    end
+    if channel == "AMBIENCE" or channel == "AMBIENT" then
+        return "Ambience"
+    end
+    return nil
+end
+
 function VoiceWheel.SetTextChannel(channel)
     channel = NormalizeTextChannel(channel)
     if not channel then
@@ -484,6 +505,17 @@ function VoiceWheel.SetTextChannel(channel)
 
     db.textChannel = channel
     Print("voice wheel text channel = " .. channel)
+end
+
+function VoiceWheel.SetSoundChannel(channel)
+    channel = NormalizeSoundChannel(channel)
+    if not channel then
+        Print("sound channel: master, sfx, dialog, music, ambience")
+        return
+    end
+
+    db.soundChannel = channel
+    Print("voice wheel sound channel = " .. channel)
 end
 
 function VoiceWheel.SetCooldown(kind, seconds)
@@ -607,11 +639,21 @@ function VoiceWheel.HandleSlash(input)
         return
     end
 
+    if command == "sound" or command == "soundchannel" or command == "sound-channel" then
+        if rest == "" then
+            Print("voice wheel sound channel: " .. tostring(db.soundChannel or DEFAULTS.soundChannel))
+        else
+            VoiceWheel.SetSoundChannel(rest)
+        end
+        return
+    end
+
     if command == "status" then
         Print("enabled=" .. tostring(db.enabled) .. ", receive=" .. tostring(db.receiveEnabled)
             .. ", sync=" .. tostring(db.syncEnabled) .. ", text=" .. tostring(db.sendText))
         Print("pack=" .. tostring(db.packId or DEFAULTS.packId))
         Print("text channel=" .. tostring(db.textChannel or "AUTO"))
+        Print("sound channel=" .. tostring(db.soundChannel or DEFAULTS.soundChannel))
         Print("layout: scale=" .. tostring(db.scale or DEFAULTS.scale)
             .. ", center=" .. tostring(db.pointX or 0) .. "," .. tostring(db.pointY or 0))
         Print("cooldowns: send=" .. tostring(db.sendCooldown)
@@ -672,6 +714,7 @@ function VoiceWheel.HandleSlash(input)
     Print("/mqq voice sync on|off - send addon sync to group")
     Print("/mqq voice text on|off - send normal chat text")
     Print("/mqq voice text auto|say|party|raid|instance|guild - set text channel")
+    Print("/mqq voice sound master|sfx|dialog|music|ambience - set sound channel")
     Print("/mqq voice list - show phrase ids and local files")
     Print("/mqq voice scale 0.6-1.6 - set wheel scale")
     Print("/mqq voice pos x y - set wheel center offset")

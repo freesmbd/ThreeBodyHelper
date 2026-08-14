@@ -49,6 +49,7 @@ Useful commands:
 /mqq voice sync on|off
 /mqq voice text on|off
 /mqq voice text auto|say|party|raid|instance|guild
+/mqq voice sound master|sfx|dialog|music|ambience
 /mqq voice list
 /mqq voice scale 0.6-1.6
 /mqq voice pos x y
@@ -60,6 +61,8 @@ Useful commands:
 ```
 
 `/mqq voice text ...` controls the single selected channel used for normal chat text when a wheel entry is sent. Addon sync still uses party/raid/instance addon messages so teammates with the same addon can play local audio.
+
+Custom voice playback defaults to the WoW `Dialog` sound channel. `/mqq voice sound ...` changes the saved playback channel for custom files and built-in fallback sound kits.
 
 The wheel position and scale are saved per account. Drag the wheel background to move it, or use `pos x y` to set its center offset from screen center. `resetpos` only recenters the wheel; `resetlayout` resets both position and scale.
 
