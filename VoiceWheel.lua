@@ -13,6 +13,18 @@ local PREFIX = "MQQVOICE"
 local MESSAGE_VERSION = "VW1"
 local ADDON_PATH = "Interface\\AddOns\\ThreeBodyHelper\\"
 
+local PHRASE_CATALOG = {
+    { id = "wan_bu_liao_la", label = "玩不了啦", text = "玩不了啦", file = "Media\\Voice\\wan_bu_liao_la.ogg", soundKitID = 8959 },
+    { id = "ready", label = "到目前为止感觉是人机难度", text = "到目前为止感觉是人机难度", file = "", soundKitID = 8959 },
+    { id = "pull", label = "Pull", text = "开怪", file = "", soundKitID = 8959 },
+    { id = "move", label = "Move", text = "走位", file = "", soundKitID = 8959 },
+    { id = "spread", label = "Spread", text = "分散", file = "", soundKitID = 8959 },
+    { id = "stack", label = "Stack", text = "集合", file = "", soundKitID = 8959 },
+    { id = "interrupt", label = "Kick", text = "打断", file = "", soundKitID = 8959 },
+    { id = "defensive", label = "Def", text = "开减伤", file = "", soundKitID = 8959 },
+    { id = "fun", label = "Nice", text = "好活", file = "", soundKitID = 8959 },
+}
+
 local DEFAULTS = {
     enabled = true,
     receiveEnabled = true,
@@ -22,19 +34,10 @@ local DEFAULTS = {
     sendCooldown = 2.5,
     globalReceiveCooldown = 2.0,
     senderReceiveCooldown = 6.0,
-    packId = "default",
+    packId = "threebody-default-v1",
     channel = "AUTO",
     textChannel = "AUTO",
-    phrases = {
-        { id = "ready", label = "到目前为止感觉是人机难度", text = "到目前为止感觉是人机难度", file = "", soundKitID = 8959 },
-        { id = "pull", label = "Pull", text = "开怪", file = "", soundKitID = 8959 },
-        { id = "move", label = "Move", text = "走位", file = "", soundKitID = 8959 },
-        { id = "spread", label = "Spread", text = "分散", file = "", soundKitID = 8959 },
-        { id = "stack", label = "Stack", text = "集合", file = "", soundKitID = 8959 },
-        { id = "interrupt", label = "Kick", text = "打断", file = "", soundKitID = 8959 },
-        { id = "defensive", label = "Def", text = "开减伤", file = "", soundKitID = 8959 },
-        { id = "fun", label = "Nice", text = "好活", file = "", soundKitID = 8959 },
-    },
+    phrases = PHRASE_CATALOG,
 }
 
 local db
@@ -59,6 +62,46 @@ local function CopyDefaults(src, dst)
     end
 
     return dst
+end
+
+local function SyncCatalogPhrases()
+    if type(db.phrases) ~= "table" then
+        db.phrases = {}
+    end
+
+    local existingById = {}
+    for _, phrase in ipairs(db.phrases) do
+        if type(phrase) == "table" and phrase.id and phrase.id ~= "" and not existingById[phrase.id] then
+            existingById[phrase.id] = phrase
+        end
+    end
+
+    local synced = {}
+    local includedIds = {}
+    for _, catalogPhrase in ipairs(PHRASE_CATALOG) do
+        local phrase = existingById[catalogPhrase.id] or {}
+        for key, value in pairs(catalogPhrase) do
+            phrase[key] = value
+        end
+        table.insert(synced, phrase)
+        includedIds[catalogPhrase.id] = true
+    end
+
+    for _, phrase in ipairs(db.phrases) do
+        if type(phrase) == "table" then
+            local phraseId = phrase.id
+            if phraseId and phraseId ~= "" then
+                if not includedIds[phraseId] then
+                    table.insert(synced, phrase)
+                    includedIds[phraseId] = true
+                end
+            else
+                table.insert(synced, phrase)
+            end
+        end
+    end
+
+    db.phrases = synced
 end
 
 local function Print(message)
@@ -473,10 +516,18 @@ function VoiceWheel.HandleSlash(input)
     if command == "status" then
         Print("enabled=" .. tostring(db.enabled) .. ", receive=" .. tostring(db.receiveEnabled)
             .. ", sync=" .. tostring(db.syncEnabled) .. ", text=" .. tostring(db.sendText))
+        Print("pack=" .. tostring(db.packId or DEFAULTS.packId))
         Print("text channel=" .. tostring(db.textChannel or "AUTO"))
         Print("cooldowns: send=" .. tostring(db.sendCooldown)
             .. "s, global=" .. tostring(db.globalReceiveCooldown)
             .. "s, sender=" .. tostring(db.senderReceiveCooldown) .. "s")
+        return
+    end
+
+    if command == "list" or command == "ids" then
+        for index, phrase in ipairs(db.phrases or {}) do
+            Print(index .. ". " .. tostring(phrase.id or "?") .. " -> " .. tostring(phrase.file or ""))
+        end
         return
     end
 
@@ -491,8 +542,9 @@ function VoiceWheel.HandleSlash(input)
     Print("/mqq voice sync on|off - send addon sync to group")
     Print("/mqq voice text on|off - send normal chat text")
     Print("/mqq voice text auto|say|party|raid|instance|guild - set text channel")
+    Print("/mqq voice list - show phrase ids and local files")
     Print("/mqq voice cooldown global|sender|send seconds")
-    Print("/mqq voice send 1-8 - trigger a phrase")
+    Print("/mqq voice send 1-9 - trigger a phrase")
 end
 
 local function HandleAddonMessage(prefix, message, channel, sender)
@@ -543,10 +595,10 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         ThreeBodyHelperDB = ThreeBodyHelperDB or {}
         ThreeBodyHelperDB.voiceWheel = CopyDefaults(DEFAULTS, ThreeBodyHelperDB.voiceWheel)
         db = ThreeBodyHelperDB.voiceWheel
-        if db.phrases and db.phrases[1] and db.phrases[1].id == "ready" then
-            db.phrases[1].label = "到目前为止感觉是人机难度"
-            db.phrases[1].text = "到目前为止感觉是人机难度"
+        if db.packId == nil or db.packId == "default" then
+            db.packId = DEFAULTS.packId
         end
+        SyncCatalogPhrases()
         RebuildPhraseLookup()
         if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
             C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)

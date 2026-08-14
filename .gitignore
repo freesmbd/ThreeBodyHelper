@@ -11,6 +11,11 @@ Cache/
 Errors/
 Logs/
 
+# Local/custom media. Keep redistributable sound packs separate unless licensed.
+Media/Voice/*.ogg
+Media/Voice/*.mp3
+!Media/Voice/README.txt
+
 # OS/editor noise
 .DS_Store
 Thumbs.db

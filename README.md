@@ -32,6 +32,16 @@ Open the wheel with one of:
 
 The voice wheel sends only phrase IDs over addon messages. Teammates must install the same addon and sound pack to hear the same custom audio.
 
+Current built-in sync identity:
+
+```text
+packId: threebody-default-v1
+payload: VW1\t<packId>\t<phraseId>
+example: VW1\tthreebody-default-v1\twan_bu_liao_la
+```
+
+Receivers use the same local catalog to resolve `wan_bu_liao_la` to `Media\Voice\wan_bu_liao_la.ogg`.
+
 Useful commands:
 
 ```text
@@ -39,6 +49,7 @@ Useful commands:
 /mqq voice sync on|off
 /mqq voice text on|off
 /mqq voice text auto|say|party|raid|instance|guild
+/mqq voice list
 /mqq voice status
 /mqq voice cooldown global|sender|send seconds
 ```
@@ -56,7 +67,7 @@ Media\Voice\
 Then point phrase entries to paths such as:
 
 ```text
-Interface\AddOns\ThreeBodyHelper\Media\Voice\ready.ogg
+Media\Voice\wan_bu_liao_la.ogg
 ```
 
 Do not include copyrighted voice assets unless you have the right to redistribute them.

@@ -3,10 +3,12 @@ Put custom voice files here.
 Recommended format:
 - OGG or MP3
 - Short clips, ideally under 3 seconds
-- File names matching phrase ids, for example ready.ogg or pull.ogg
+- File names matching phrase ids, for example wan_bu_liao_la.ogg or pull.ogg
 
 After adding or replacing sound files, run /reload or restart the game before testing.
 
-To use a file, edit ThreeBodyHelperDB.voiceWheel.phrases in SavedVariables or add a
-small phrase config module that sets phrase.file to a path such as:
-Interface\AddOns\ThreeBodyHelper\Media\Voice\ready.ogg
+The built-in pack currently maps phrase id wan_bu_liao_la to:
+Media\Voice\wan_bu_liao_la.ogg
+
+Addon sync sends only pack id + phrase id. Everyone who should hear a custom
+clip needs the same local file at the mapped path.
