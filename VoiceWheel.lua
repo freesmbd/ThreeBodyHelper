@@ -828,20 +828,24 @@ local function EnsureSlotConfigFrame()
     slotConfigFrame.title:SetText("ThreeBodyHelper 语音轮盘配置")
 
     slotConfigFrame.summary = slotConfigFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    slotConfigFrame.summary:SetPoint("TOPLEFT", 24, -42)
+    slotConfigFrame.summary:SetPoint("TOPLEFT", 24, -38)
     slotConfigFrame.summary:SetText("")
 
+    slotConfigFrame.hint = slotConfigFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    slotConfigFrame.hint:SetPoint("TOPLEFT", 24, -60)
+    slotConfigFrame.hint:SetText("先点选右边槽位，然后在左侧选择想要放入的语音")
+
     local libraryTitle = slotConfigFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    libraryTitle:SetPoint("TOPLEFT", 24, -72)
-    libraryTitle:SetText("语音库")
+    libraryTitle:SetPoint("TOPLEFT", 24, -88)
+    libraryTitle:SetText("语音库搜索")
 
     local slotTitle = slotConfigFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    slotTitle:SetPoint("TOPLEFT", 440, -72)
+    slotTitle:SetPoint("TOPLEFT", 440, -88)
     slotTitle:SetText("轮盘 8 个位置")
 
     slotConfigFrame.searchBox = CreateFrame("EditBox", nil, slotConfigFrame, "InputBoxTemplate")
     slotConfigFrame.searchBox:SetSize(250, 24)
-    slotConfigFrame.searchBox:SetPoint("TOPLEFT", 82, -66)
+    slotConfigFrame.searchBox:SetPoint("TOPLEFT", 108, -82)
     slotConfigFrame.searchBox:SetAutoFocus(false)
     slotConfigFrame.searchBox:SetScript("OnTextChanged", function(self)
         catalogSearch = self:GetText() or ""
@@ -853,7 +857,7 @@ local function EnsureSlotConfigFrame()
     end)
 
     for index = 1, 10 do
-        local y = -104 - ((index - 1) * 34)
+        local y = -120 - ((index - 1) * 34)
         local row = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
         row:SetSize(300, 28)
         row:SetPoint("TOPLEFT", 24, y)
@@ -880,7 +884,7 @@ local function EnsureSlotConfigFrame()
     end
 
     for index = 1, SLOT_COUNT do
-        local y = -104 - ((index - 1) * 38)
+        local y = -120 - ((index - 1) * 38)
         local slotButton = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
         slotButton:SetSize(250, 30)
         slotButton:SetPoint("TOPLEFT", 440, y)
@@ -991,7 +995,7 @@ function VoiceWheel.RefreshSlotConfig()
         if phrase then
             controls.row.phraseId = phrase.id
             controls.playButton.phraseId = phrase.id
-            controls.row:SetText((phrase.label or phrase.id) .. "  [" .. phrase.id .. "]")
+            controls.row:SetText(phrase.label or phrase.id)
             controls.row:Show()
             controls.playButton:Show()
         else
@@ -1010,6 +1014,9 @@ function VoiceWheel.ShowSlotConfig()
         return
     end
 
+    if optionsFrame and optionsFrame:IsShown() then
+        optionsFrame:Hide()
+    end
     EnsureSlotConfigFrame()
     VoiceWheel.RefreshSlotConfig()
     slotConfigFrame:Show()
