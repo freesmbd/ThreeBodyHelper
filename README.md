@@ -59,6 +59,10 @@ Useful commands:
 /mqq voice text auto|say|party|raid|instance|guild
 /mqq voice sound master|sfx|dialog|music|ambience
 /mqq voice list
+/mqq voice slots
+/mqq voice slot 1 chong_feng
+/mqq voice slot 1 clear
+/mqq voice resetslots
 /mqq voice scale 0.6-1.6
 /mqq voice pos x y
 /mqq voice unlock
@@ -70,7 +74,11 @@ Useful commands:
 /mqq voice cooldown global|sender|send seconds
 ```
 
-The settings panel covers the same core options as the commands: receive sync, send sync, chat text, text channel, sound channel, movement lock, scale, layout reset, and cooldowns.
+The settings panel covers the same core options as the commands: receive sync, send sync, chat text, text channel, sound channel, movement lock, scale, layout reset, and cooldowns. It also links to a separate wheel phrase configuration panel.
+
+The wheel phrase configuration panel is separate from the quick wheel and the main settings panel. Open it with `/mqq voice slots`, `/mqq voice wheelconfig`, or the settings-panel button. It shows the global voice catalog on the left and the user's 8 wheel slots on the right. Select a slot, then select a catalog phrase to bind it. The panel also supports local preview, clearing a slot, restoring the default 8 slots, and opening the wheel preview.
+
+Internally, the addon keeps the built-in voice catalog separate from the user's slot choices. Group sync still sends the stable phrase ID, not the local wheel slot number, so users may put the same phrase in different wheel positions without breaking synchronized playback.
 
 `/mqq voice text ...` controls the single selected channel used for normal chat text when a wheel entry is sent. Addon sync still uses party/raid/instance addon messages so teammates with the same addon can play local audio.
 

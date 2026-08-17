@@ -12,6 +12,7 @@ _G.BINDING_NAME_THREEBODYHELPER_VOICEWHEEL_TOGGLE = "Open voice wheel"
 local PREFIX = "MQQVOICE"
 local MESSAGE_VERSION = "VW1"
 local ADDON_PATH = "Interface\\AddOns\\ThreeBodyHelper\\"
+local SLOT_COUNT = 8
 
 local PHRASE_CATALOG = {
     { id = "wan_bu_liao_la", label = "玩不了啦", text = "玩不了啦", file = "Media\\Voice\\wan_bu_liao_la.ogg" },
@@ -22,6 +23,17 @@ local PHRASE_CATALOG = {
     { id = "bai_tuo_shui_qu_sha_le_ta_ba", label = "拜托谁去杀了他吧", text = "拜托谁去杀了他吧", file = "Media\\Voice\\bai_tuo_shui_qu_sha_le_ta_ba.ogg" },
     { id = "piao_liang", label = "漂亮", text = "漂亮", file = "Media\\Voice\\piao_liang.ogg" },
     { id = "dui_you_ne", label = "队友呢", text = "队友呢", file = "Media\\Voice\\dui_you_ne.ogg" },
+}
+
+local DEFAULT_SLOT_IDS = {
+    "wan_bu_liao_la",
+    "chong_feng",
+    "huan_hu",
+    "bei_shang_xiao_hao",
+    "tian_huo_tian_huo",
+    "bai_tuo_shui_qu_sha_le_ta_ba",
+    "piao_liang",
+    "dui_you_ne",
 }
 
 local RETIRED_CATALOG_IDS = {
@@ -52,10 +64,11 @@ local DEFAULTS = {
     pointX = 0,
     pointY = 0,
     moveUnlocked = false,
-    phrases = PHRASE_CATALOG,
+    slots = DEFAULT_SLOT_IDS,
 }
 
 local db
+local catalogPhrases = {}
 local phraseById = {}
 local buttons = {}
 local selectedIndex = nil
@@ -64,7 +77,13 @@ local lastGlobalReceiveAt = -100
 local lastSenderReceiveAt = {}
 local wheel
 local optionsFrame
+local slotConfigFrame
 local optionControls = {}
+local slotButtons = {}
+local catalogRows = {}
+local selectedSlot = 1
+local catalogPage = 1
+local catalogSearch = ""
 local Print
 
 local function CopyDefaults(src, dst)
@@ -97,44 +116,85 @@ local function Clamp(value, minValue, maxValue)
     return value
 end
 
-local function SyncCatalogPhrases()
-    if type(db.phrases) ~= "table" then
-        db.phrases = {}
+local function CopyPhrase(phrase)
+    local copy = {}
+    for key, value in pairs(phrase) do
+        copy[key] = value
+    end
+    return copy
+end
+
+local function AddCatalogPhrase(phrase, includedIds)
+    if type(phrase) ~= "table" or not phrase.id or phrase.id == "" or includedIds[phrase.id] then
+        return
     end
 
-    local existingById = {}
-    for _, phrase in ipairs(db.phrases) do
-        if type(phrase) == "table" and phrase.id and phrase.id ~= "" and not existingById[phrase.id] then
-            existingById[phrase.id] = phrase
-        end
-    end
+    phrase.catalogIndex = #catalogPhrases + 1
+    table.insert(catalogPhrases, phrase)
+    phraseById[phrase.id] = phrase
+    includedIds[phrase.id] = true
+end
 
-    local synced = {}
+local function BuildPhraseCatalog()
+    wipe(catalogPhrases)
+    wipe(phraseById)
+
     local includedIds = {}
-    for _, catalogPhrase in ipairs(PHRASE_CATALOG) do
-        local phrase = existingById[catalogPhrase.id] or {}
-        for key, value in pairs(catalogPhrase) do
-            phrase[key] = value
-        end
-        table.insert(synced, phrase)
-        includedIds[catalogPhrase.id] = true
+    for _, phrase in ipairs(PHRASE_CATALOG) do
+        AddCatalogPhrase(CopyPhrase(phrase), includedIds)
     end
 
-    for _, phrase in ipairs(db.phrases) do
-        if type(phrase) == "table" then
-            local phraseId = phrase.id
-            if phraseId and phraseId ~= "" then
-                if not includedIds[phraseId] and not RETIRED_CATALOG_IDS[phraseId] then
-                    table.insert(synced, phrase)
-                    includedIds[phraseId] = true
-                end
-            else
-                table.insert(synced, phrase)
+    if type(db.phrases) == "table" then
+        for _, phrase in ipairs(db.phrases) do
+            local phraseId = type(phrase) == "table" and phrase.id
+            if phraseId and phraseId ~= "" and not RETIRED_CATALOG_IDS[phraseId] then
+                AddCatalogPhrase(CopyPhrase(phrase), includedIds)
+            end
+        end
+    end
+end
+
+local function NormalizeSlots()
+    local sourceSlots = {}
+
+    if type(db.slots) == "table" then
+        sourceSlots = db.slots
+    elseif type(db.phrases) == "table" then
+        for _, phrase in ipairs(db.phrases) do
+            if type(phrase) == "table" and phrase.id and phrase.id ~= "" and not RETIRED_CATALOG_IDS[phrase.id] then
+                table.insert(sourceSlots, phrase.id)
             end
         end
     end
 
-    db.phrases = synced
+    local normalized = {}
+    for index = 1, SLOT_COUNT do
+        local phraseId = sourceSlots[index]
+        if phraseId == "" then
+            normalized[index] = ""
+        elseif phraseId and phraseById[phraseId] then
+            normalized[index] = phraseId
+        elseif DEFAULT_SLOT_IDS[index] and phraseById[DEFAULT_SLOT_IDS[index]] then
+            normalized[index] = DEFAULT_SLOT_IDS[index]
+        else
+            normalized[index] = ""
+        end
+    end
+
+    db.slots = normalized
+end
+
+local function GetSlotPhrase(index)
+    index = tonumber(index)
+    if not index or not db or type(db.slots) ~= "table" then
+        return nil
+    end
+
+    local phraseId = db.slots[index]
+    if not phraseId or phraseId == "" then
+        return nil
+    end
+    return phraseById[phraseId]
 end
 
 local function ApplyWheelPlacement()
@@ -170,20 +230,6 @@ end
 function Print(message)
     if DEFAULT_CHAT_FRAME then
         DEFAULT_CHAT_FRAME:AddMessage("|cff66ccffThreeBodyHelper Voice|r " .. tostring(message))
-    end
-end
-
-local function RebuildPhraseLookup()
-    wipe(phraseById)
-    if not db or type(db.phrases) ~= "table" then
-        return
-    end
-
-    for index, phrase in ipairs(db.phrases) do
-        if phrase.id and phrase.id ~= "" then
-            phrase.index = index
-            phraseById[phrase.id] = phrase
-        end
     end
 end
 
@@ -297,8 +343,11 @@ local function SelectPhrase(index, fromRemote)
         return
     end
 
-    local phrase = db.phrases and db.phrases[index]
+    local phrase = GetSlotPhrase(index)
     if not phrase then
+        if not fromRemote then
+            Print("voice wheel slot is empty")
+        end
         return
     end
 
@@ -385,7 +434,7 @@ local function HighlightSelected(index)
         end
     end
 
-    local phrase = index and db and db.phrases and db.phrases[index]
+    local phrase = index and GetSlotPhrase(index)
     wheel.centerText:SetText((phrase and (phrase.text or phrase.label or phrase.id)) or "语音轮盘")
 end
 
@@ -394,11 +443,11 @@ local function LayoutButtons()
         button:Hide()
     end
 
-    if not db or type(db.phrases) ~= "table" then
+    if not db or type(db.slots) ~= "table" then
         return
     end
 
-    local count = math.min(#db.phrases, 12)
+    local count = SLOT_COUNT
     local radius = 205
     for i = 1, count do
         local button = buttons[i]
@@ -430,10 +479,10 @@ local function LayoutButtons()
             buttons[i] = button
         end
 
-        local phrase = db.phrases[i]
+        local phrase = GetSlotPhrase(i)
         local angle = ((i - 1) / count) * math.pi * 2 - math.pi / 2
         button.index = i
-        button.text:SetText(phrase.label or phrase.text or phrase.id or tostring(i))
+        button.text:SetText((phrase and (phrase.label or phrase.text or phrase.id)) or "空")
         button:ClearAllPoints()
         button:SetPoint("CENTER", wheel, "CENTER", math.cos(angle) * radius, -math.sin(angle) * radius)
         button:Show()
@@ -465,6 +514,56 @@ end
 
 function VoiceWheel.Select(index)
     SelectPhrase(tonumber(index), false)
+end
+
+function VoiceWheel.SetSlot(index, phraseId)
+    index = tonumber(index)
+    phraseId = strtrim(phraseId or "")
+    if not index or index < 1 or index > SLOT_COUNT then
+        Print("slot must be a number from 1 to " .. SLOT_COUNT)
+        return
+    end
+    if phraseId == "" then
+        Print("phrase id is required")
+        return
+    end
+    if not phraseById[phraseId] then
+        Print("unknown phrase id: " .. phraseId)
+        return
+    end
+
+    db.slots[index] = phraseId
+    if wheel:IsShown() then
+        LayoutButtons()
+    end
+    VoiceWheel.RefreshSlotConfig()
+    Print("voice wheel slot " .. index .. " = " .. phraseId)
+end
+
+function VoiceWheel.ClearSlot(index)
+    index = tonumber(index)
+    if not index or index < 1 or index > SLOT_COUNT then
+        Print("slot must be a number from 1 to " .. SLOT_COUNT)
+        return
+    end
+
+    db.slots[index] = ""
+    if wheel:IsShown() then
+        LayoutButtons()
+    end
+    VoiceWheel.RefreshSlotConfig()
+    Print("voice wheel slot " .. index .. " cleared")
+end
+
+function VoiceWheel.ResetSlots()
+    for index = 1, SLOT_COUNT do
+        db.slots[index] = DEFAULT_SLOT_IDS[index] or ""
+    end
+    if wheel:IsShown() then
+        LayoutButtons()
+    end
+    VoiceWheel.RefreshSlotConfig()
+    Print("voice wheel slots reset")
 end
 
 function VoiceWheel.SetReceiveEnabled(value)
@@ -680,6 +779,242 @@ local function CreateOptionsNumber(parent, label, y, getter, setter)
     end)
 end
 
+local function PhraseMatchesSearch(phrase, search)
+    if search == "" then
+        return true
+    end
+
+    local haystack = string.lower(table.concat({
+        tostring(phrase.id or ""),
+        tostring(phrase.label or ""),
+        tostring(phrase.text or ""),
+    }, " "))
+    return haystack:find(search, 1, true) ~= nil
+end
+
+local function GetFilteredCatalog()
+    local filtered = {}
+    local search = string.lower(strtrim(catalogSearch or ""))
+    for _, phrase in ipairs(catalogPhrases) do
+        if PhraseMatchesSearch(phrase, search) then
+            table.insert(filtered, phrase)
+        end
+    end
+    return filtered
+end
+
+local function EnsureSlotConfigFrame()
+    if slotConfigFrame then
+        return slotConfigFrame
+    end
+
+    slotConfigFrame = CreateFrame("Frame", "ThreeBodyHelperVoiceSlotConfigFrame", UIParent, "BasicFrameTemplateWithInset")
+    slotConfigFrame:SetSize(760, 520)
+    slotConfigFrame:SetPoint("CENTER")
+    slotConfigFrame:SetFrameStrata("DIALOG")
+    slotConfigFrame:EnableMouse(true)
+    slotConfigFrame:SetMovable(true)
+    slotConfigFrame:RegisterForDrag("LeftButton")
+    slotConfigFrame:SetScript("OnDragStart", function(self)
+        self:StartMoving()
+    end)
+    slotConfigFrame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+    end)
+    slotConfigFrame:Hide()
+
+    slotConfigFrame.title = slotConfigFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+    slotConfigFrame.title:SetPoint("TOPLEFT", 16, -10)
+    slotConfigFrame.title:SetText("ThreeBodyHelper 语音轮盘配置")
+
+    slotConfigFrame.summary = slotConfigFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    slotConfigFrame.summary:SetPoint("TOPLEFT", 24, -42)
+    slotConfigFrame.summary:SetText("")
+
+    local libraryTitle = slotConfigFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    libraryTitle:SetPoint("TOPLEFT", 24, -72)
+    libraryTitle:SetText("语音库")
+
+    local slotTitle = slotConfigFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    slotTitle:SetPoint("TOPLEFT", 440, -72)
+    slotTitle:SetText("轮盘 8 个位置")
+
+    slotConfigFrame.searchBox = CreateFrame("EditBox", nil, slotConfigFrame, "InputBoxTemplate")
+    slotConfigFrame.searchBox:SetSize(250, 24)
+    slotConfigFrame.searchBox:SetPoint("TOPLEFT", 82, -66)
+    slotConfigFrame.searchBox:SetAutoFocus(false)
+    slotConfigFrame.searchBox:SetScript("OnTextChanged", function(self)
+        catalogSearch = self:GetText() or ""
+        catalogPage = 1
+        VoiceWheel.RefreshSlotConfig()
+    end)
+    slotConfigFrame.searchBox:SetScript("OnEscapePressed", function(self)
+        self:ClearFocus()
+    end)
+
+    for index = 1, 10 do
+        local y = -104 - ((index - 1) * 34)
+        local row = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
+        row:SetSize(300, 28)
+        row:SetPoint("TOPLEFT", 24, y)
+        row:SetScript("OnClick", function(self)
+            if self.phraseId then
+                VoiceWheel.SetSlot(selectedSlot, self.phraseId)
+            end
+        end)
+
+        local playButton = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
+        playButton:SetSize(54, 28)
+        playButton:SetPoint("LEFT", row, "RIGHT", 8, 0)
+        playButton:SetText("试听")
+        playButton:SetScript("OnClick", function(self)
+            if self.phraseId and phraseById[self.phraseId] then
+                PlayPhrase(phraseById[self.phraseId])
+            end
+        end)
+
+        catalogRows[index] = {
+            row = row,
+            playButton = playButton,
+        }
+    end
+
+    for index = 1, SLOT_COUNT do
+        local y = -104 - ((index - 1) * 38)
+        local slotButton = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
+        slotButton:SetSize(250, 30)
+        slotButton:SetPoint("TOPLEFT", 440, y)
+        slotButton.slotIndex = index
+        slotButton:SetScript("OnClick", function(self)
+            selectedSlot = self.slotIndex
+            VoiceWheel.RefreshSlotConfig()
+        end)
+        slotButtons[index] = slotButton
+    end
+
+    local prevButton = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
+    prevButton:SetSize(72, 24)
+    prevButton:SetPoint("BOTTOMLEFT", 24, 60)
+    prevButton:SetText("上一页")
+    prevButton:SetScript("OnClick", function()
+        catalogPage = math.max(1, catalogPage - 1)
+        VoiceWheel.RefreshSlotConfig()
+    end)
+
+    local nextButton = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
+    nextButton:SetSize(72, 24)
+    nextButton:SetPoint("LEFT", prevButton, "RIGHT", 10, 0)
+    nextButton:SetText("下一页")
+    nextButton:SetScript("OnClick", function()
+        catalogPage = catalogPage + 1
+        VoiceWheel.RefreshSlotConfig()
+    end)
+
+    slotConfigFrame.pageText = slotConfigFrame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    slotConfigFrame.pageText:SetPoint("LEFT", nextButton, "RIGHT", 12, 0)
+    slotConfigFrame.pageText:SetText("")
+
+    local previewButton = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
+    previewButton:SetSize(82, 24)
+    previewButton:SetPoint("BOTTOMLEFT", 440, 98)
+    previewButton:SetText("试听槽位")
+    previewButton:SetScript("OnClick", function()
+        local phrase = GetSlotPhrase(selectedSlot)
+        if phrase then
+            PlayPhrase(phrase)
+        else
+            Print("voice wheel slot is empty")
+        end
+    end)
+
+    local clearButton = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
+    clearButton:SetSize(82, 24)
+    clearButton:SetPoint("LEFT", previewButton, "RIGHT", 10, 0)
+    clearButton:SetText("清空槽位")
+    clearButton:SetScript("OnClick", function()
+        VoiceWheel.ClearSlot(selectedSlot)
+    end)
+
+    local resetButton = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
+    resetButton:SetSize(100, 24)
+    resetButton:SetPoint("BOTTOMLEFT", 440, 60)
+    resetButton:SetText("恢复默认")
+    resetButton:SetScript("OnClick", function()
+        VoiceWheel.ResetSlots()
+    end)
+
+    local wheelButton = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
+    wheelButton:SetSize(100, 24)
+    wheelButton:SetPoint("LEFT", resetButton, "RIGHT", 10, 0)
+    wheelButton:SetText("打开轮盘")
+    wheelButton:SetScript("OnClick", function()
+        VoiceWheel.Show()
+    end)
+
+    local closeButton = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
+    closeButton:SetSize(76, 24)
+    closeButton:SetPoint("BOTTOMRIGHT", -24, 22)
+    closeButton:SetText("关闭")
+    closeButton:SetScript("OnClick", function()
+        slotConfigFrame:Hide()
+    end)
+
+    return slotConfigFrame
+end
+
+function VoiceWheel.RefreshSlotConfig()
+    if not slotConfigFrame then
+        return
+    end
+
+    slotConfigFrame.summary:SetText("语音包: " .. tostring(db.packId or DEFAULTS.packId)
+        .. "    槽位: " .. SLOT_COUNT .. "    当前选中: " .. selectedSlot)
+
+    for index, slotButton in ipairs(slotButtons) do
+        local phrase = GetSlotPhrase(index)
+        local prefix = (index == selectedSlot) and "> " or "  "
+        slotButton:SetText(prefix .. index .. ". " .. ((phrase and (phrase.label or phrase.id)) or "空"))
+    end
+
+    local filtered = GetFilteredCatalog()
+    local pageSize = #catalogRows
+    local maxPage = math.max(1, math.ceil(#filtered / pageSize))
+    if catalogPage > maxPage then
+        catalogPage = maxPage
+    end
+    if catalogPage < 1 then
+        catalogPage = 1
+    end
+
+    for rowIndex, controls in ipairs(catalogRows) do
+        local phrase = filtered[((catalogPage - 1) * pageSize) + rowIndex]
+        if phrase then
+            controls.row.phraseId = phrase.id
+            controls.playButton.phraseId = phrase.id
+            controls.row:SetText((phrase.label or phrase.id) .. "  [" .. phrase.id .. "]")
+            controls.row:Show()
+            controls.playButton:Show()
+        else
+            controls.row.phraseId = nil
+            controls.playButton.phraseId = nil
+            controls.row:Hide()
+            controls.playButton:Hide()
+        end
+    end
+
+    slotConfigFrame.pageText:SetText(catalogPage .. "/" .. maxPage .. "  共 " .. #filtered .. " 条")
+end
+
+function VoiceWheel.ShowSlotConfig()
+    if not db then
+        return
+    end
+
+    EnsureSlotConfigFrame()
+    VoiceWheel.RefreshSlotConfig()
+    slotConfigFrame:Show()
+end
+
 local function EnsureOptionsFrame()
     if optionsFrame then
         return optionsFrame
@@ -703,6 +1038,14 @@ local function EnsureOptionsFrame()
     optionsFrame.title = optionsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
     optionsFrame.title:SetPoint("TOPLEFT", 16, -10)
     optionsFrame.title:SetText("ThreeBodyHelper 语音轮盘设置")
+
+    local slotConfigButton = CreateFrame("Button", nil, optionsFrame, "UIPanelButtonTemplate")
+    slotConfigButton:SetSize(118, 24)
+    slotConfigButton:SetPoint("TOPRIGHT", -22, -38)
+    slotConfigButton:SetText("配置轮盘语音")
+    slotConfigButton:SetScript("OnClick", function()
+        VoiceWheel.ShowSlotConfig()
+    end)
 
     CreateOptionsCheckbox(optionsFrame, "接收队友同步语音", -48, function()
         return db.receiveEnabled
@@ -831,6 +1174,33 @@ function VoiceWheel.HandleSlash(input)
         return
     end
 
+    if command == "slots" or command == "slotconfig" or command == "wheelconfig" then
+        VoiceWheel.ShowSlotConfig()
+        return
+    end
+
+    if command == "slot" then
+        local slotIndex, phraseId = rest:match("^(%d+)%s*(.-)$")
+        slotIndex = tonumber(slotIndex)
+        phraseId = strtrim(phraseId or "")
+        if not slotIndex then
+            Print("slot usage: /mqq voice slot 1 " .. DEFAULT_SLOT_IDS[1])
+        elseif phraseId == "" then
+            local phrase = GetSlotPhrase(slotIndex)
+            Print("slot " .. slotIndex .. " = " .. ((phrase and phrase.id) or "empty"))
+        elseif string.lower(phraseId) == "clear" or string.lower(phraseId) == "empty" then
+            VoiceWheel.ClearSlot(slotIndex)
+        else
+            VoiceWheel.SetSlot(slotIndex, phraseId)
+        end
+        return
+    end
+
+    if command == "resetslots" or command == "defaultslots" then
+        VoiceWheel.ResetSlots()
+        return
+    end
+
     if command == "send" or command == "play" then
         VoiceWheel.Select(tonumber(rest) or 1)
         return
@@ -908,9 +1278,17 @@ function VoiceWheel.HandleSlash(input)
         return
     end
 
-    if command == "list" or command == "ids" then
-        for index, phrase in ipairs(db.phrases or {}) do
+    if command == "list" or command == "ids" or command == "catalog" then
+        for index, phrase in ipairs(catalogPhrases or {}) do
             Print(index .. ". " .. tostring(phrase.id or "?") .. " -> " .. tostring(phrase.file or ""))
+        end
+        return
+    end
+
+    if command == "slotlist" or command == "listslots" then
+        for index = 1, SLOT_COUNT do
+            local phrase = GetSlotPhrase(index)
+            Print(index .. ". " .. ((phrase and phrase.id) or "empty"))
         end
         return
     end
@@ -973,6 +1351,10 @@ function VoiceWheel.HandleSlash(input)
 
     Print("/mqq voice - open wheel")
     Print("/mqq voice config - open settings panel")
+    Print("/mqq voice slots - open wheel phrase slot panel")
+    Print("/mqq voice slot 1 phrase_id - bind a phrase to a wheel slot")
+    Print("/mqq voice slot 1 clear - clear a wheel slot")
+    Print("/mqq voice resetslots - restore default wheel slots")
     Print("/mqq voice receive on|off - allow/block teammates' synced voice")
     Print("/mqq voice sync on|off - send addon sync to group")
     Print("/mqq voice text on|off - send normal chat text")
@@ -1019,7 +1401,7 @@ local function HandleAddonMessage(prefix, message, channel, sender)
     if sender then
         lastSenderReceiveAt[sender] = now
     end
-    SelectPhrase(phrase.index, true)
+    PlayPhrase(phrase)
 end
 
 local eventFrame = CreateFrame("Frame")
@@ -1038,8 +1420,8 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         if db.packId == nil or db.packId == "default" then
             db.packId = DEFAULTS.packId
         end
-        SyncCatalogPhrases()
-        RebuildPhraseLookup()
+        BuildPhraseCatalog()
+        NormalizeSlots()
         ApplyWheelPlacement()
         if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
             C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
