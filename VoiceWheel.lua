@@ -406,6 +406,20 @@ wheel:SetScript("OnDragStop", function()
 end)
 wheel:Hide()
 
+wheel.centerCore = wheel:CreateTexture(nil, "BACKGROUND")
+wheel.centerCore:SetPoint("CENTER", 0, 0)
+wheel.centerCore:SetSize(220, 220)
+wheel.centerCore:SetTexture("Interface\\Cooldown\\star4")
+wheel.centerCore:SetBlendMode("BLEND")
+wheel.centerCore:SetVertexColor(0.02, 0.04, 0.10, 0.34)
+
+wheel.centerGlow = wheel:CreateTexture(nil, "BACKGROUND")
+wheel.centerGlow:SetPoint("CENTER", 0, 0)
+wheel.centerGlow:SetSize(286, 286)
+wheel.centerGlow:SetTexture("Interface\\Cooldown\\star4")
+wheel.centerGlow:SetBlendMode("ADD")
+wheel.centerGlow:SetVertexColor(0.15, 0.36, 0.72, 0.10)
+
 wheel.centerText = wheel:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
 wheel.centerText:SetPoint("CENTER", 0, 0)
 wheel.centerText:SetWidth(220)
@@ -421,22 +435,34 @@ wheel.centerSubText = wheel:CreateFontString(nil, "OVERLAY", "GameFontDisableSma
     wheel.centerSubText:SetPoint("TOP", wheel.centerText, "BOTTOM", 0, -8)
 wheel.centerSubText:SetText("点击发送，配置里解锁移动，右键关闭")
 
+local function SetButtonBorder(button, r, g, b, a)
+    if not button or not button.border then
+        return
+    end
+
+    for _, border in ipairs(button.border) do
+        border:SetColorTexture(r, g, b, a)
+    end
+end
+
 local function HighlightSelected(index)
     selectedIndex = index
     for i, button in ipairs(buttons) do
         if i == index then
             button:SetAlpha(1)
             if button.bg then
-                button.bg:SetColorTexture(0.08, 0.15, 0.22, 0.86)
+                button.bg:SetColorTexture(0.03, 0.05, 0.08, 0.82)
             end
+            SetButtonBorder(button, 0.95, 0.72, 0.26, 0.92)
             if button.text then
                 button.text:SetTextColor(1, 0.92, 0.35)
             end
         else
             button:SetAlpha(0.78)
             if button.bg then
-                button.bg:SetColorTexture(0.02, 0.02, 0.02, 0.62)
+                button.bg:SetColorTexture(0.01, 0.015, 0.025, 0.70)
             end
+            SetButtonBorder(button, 0.18, 0.34, 0.46, 0.46)
             if button.text then
                 button.text:SetTextColor(0.9, 0.9, 0.9)
             end
@@ -445,6 +471,13 @@ local function HighlightSelected(index)
 
     local phrase = index and GetSlotPhrase(index)
     wheel.centerText:SetText((phrase and (phrase.text or phrase.label or phrase.id)) or "语音轮盘")
+    if wheel.centerGlow then
+        if phrase then
+            wheel.centerGlow:SetVertexColor(0.95, 0.72, 0.26, 0.18)
+        else
+            wheel.centerGlow:SetVertexColor(0.15, 0.36, 0.72, 0.10)
+        end
+    end
 end
 
 local function LayoutButtons()
@@ -465,7 +498,29 @@ local function LayoutButtons()
             button:SetSize(176, 54)
             button.bg = button:CreateTexture(nil, "BACKGROUND")
             button.bg:SetAllPoints()
-            button.bg:SetColorTexture(0.02, 0.02, 0.02, 0.62)
+            button.bg:SetColorTexture(0.01, 0.015, 0.025, 0.70)
+            button.border = {}
+            button.border.top = button:CreateTexture(nil, "BORDER")
+            button.border.top:SetPoint("TOPLEFT", 0, 0)
+            button.border.top:SetPoint("TOPRIGHT", 0, 0)
+            button.border.top:SetHeight(1)
+            table.insert(button.border, button.border.top)
+            button.border.bottom = button:CreateTexture(nil, "BORDER")
+            button.border.bottom:SetPoint("BOTTOMLEFT", 0, 0)
+            button.border.bottom:SetPoint("BOTTOMRIGHT", 0, 0)
+            button.border.bottom:SetHeight(1)
+            table.insert(button.border, button.border.bottom)
+            button.border.left = button:CreateTexture(nil, "BORDER")
+            button.border.left:SetPoint("TOPLEFT", 0, 0)
+            button.border.left:SetPoint("BOTTOMLEFT", 0, 0)
+            button.border.left:SetWidth(1)
+            table.insert(button.border, button.border.left)
+            button.border.right = button:CreateTexture(nil, "BORDER")
+            button.border.right:SetPoint("TOPRIGHT", 0, 0)
+            button.border.right:SetPoint("BOTTOMRIGHT", 0, 0)
+            button.border.right:SetWidth(1)
+            table.insert(button.border, button.border.right)
+            SetButtonBorder(button, 0.18, 0.34, 0.46, 0.46)
             button.text = button:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
             button.text:SetPoint("CENTER", 0, 0)
             button.text:SetWidth(162)
