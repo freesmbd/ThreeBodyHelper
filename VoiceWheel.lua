@@ -867,7 +867,7 @@ local function EnsureSlotConfigFrame()
         self:ClearFocus()
     end)
 
-    for index = 1, 10 do
+    for index = 1, 8 do
         local y = -120 - ((index - 1) * 34)
         local row = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
         row:SetSize(300, 28)
@@ -931,7 +931,7 @@ local function EnsureSlotConfigFrame()
 
     local previewButton = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
     previewButton:SetSize(82, 24)
-    previewButton:SetPoint("BOTTOMLEFT", 440, 98)
+    previewButton:SetPoint("BOTTOMLEFT", 440, 62)
     previewButton:SetText("试听槽位")
     previewButton:SetScript("OnClick", function()
         local phrase = GetSlotPhrase(selectedSlot)
@@ -952,7 +952,7 @@ local function EnsureSlotConfigFrame()
 
     local resetButton = CreateFrame("Button", nil, slotConfigFrame, "UIPanelButtonTemplate")
     resetButton:SetSize(100, 24)
-    resetButton:SetPoint("BOTTOMLEFT", 440, 60)
+    resetButton:SetPoint("BOTTOMLEFT", 440, 28)
     resetButton:SetText("恢复默认")
     resetButton:SetScript("OnClick", function()
         VoiceWheel.ResetSlots()
