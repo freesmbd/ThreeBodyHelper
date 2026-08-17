@@ -48,7 +48,7 @@ example: VW1\tthreebody-default-v1\twan_bu_liao_la
 ```
 
 Receivers use the same local catalog to resolve phrase ids to local files such as `Media\Voice\wan_bu_liao_la.ogg`.
-The first built-in voice pack contains 8 wheel entries: `wan_bu_liao_la`, `chong_feng`, `huan_hu`, `bei_shang_xiao_hao`, `tian_huo_tian_huo`, `bai_tuo_shui_qu_sha_le_ta_ba`, `piao_liang`, and `dui_you_ne`.
+The built-in voice catalog contains 19 voice entries. The default wheel still uses the original 8 slots: `wan_bu_liao_la`, `chong_feng`, `huan_hu`, `bei_shang_xiao_hao`, `tian_huo_tian_huo`, `bai_tuo_shui_qu_sha_le_ta_ba`, `piao_liang`, and `dui_you_ne`. Users can bind additional catalog voices to the wheel in the separate slot configuration panel.
 
 Useful commands:
 

@@ -23,6 +23,17 @@ local PHRASE_CATALOG = {
     { id = "bai_tuo_shui_qu_sha_le_ta_ba", label = "拜托谁去杀了他吧", text = "拜托谁去杀了他吧", file = "Media\\Voice\\bai_tuo_shui_qu_sha_le_ta_ba.ogg" },
     { id = "piao_liang", label = "漂亮", text = "漂亮", file = "Media\\Voice\\piao_liang.ogg" },
     { id = "dui_you_ne", label = "队友呢", text = "队友呢", file = "Media\\Voice\\dui_you_ne.ogg" },
+    { id = "xiao_fei_gun", label = "小飞棍", text = "小飞棍", file = "Media\\Voice\\xiao_fei_gun.ogg" },
+    { id = "ni_you_song_le", label = "你又怂了", text = "你又怂了", file = "Media\\Voice\\ni_you_song_le.ogg" },
+    { id = "ni_qi_bu_qi", label = "你气不气", text = "你气不气", file = "Media\\Voice\\ni_qi_bu_qi.ogg" },
+    { id = "ni_zhe_me_cai", label = "你这么菜", text = "你这么菜", file = "Media\\Voice\\ni_zhe_me_cai.ogg" },
+    { id = "mao_chong_ren_lei", label = "冒充人类", text = "冒充人类", file = "Media\\Voice\\mao_chong_ren_lei.ogg" },
+    { id = "hui_da_wo", label = "回答我", text = "回答我", file = "Media\\Voice\\hui_da_wo.ogg" },
+    { id = "da_jia_zhen_de_hao_qiang", label = "大家真的好强", text = "大家真的好强", file = "Media\\Voice\\da_jia_zhen_de_hao_qiang.ogg" },
+    { id = "lao_ba_dao_le", label = "老霸道了", text = "老霸道了", file = "Media\\Voice\\lao_ba_dao_le.ogg" },
+    { id = "kua_zang_o", label = "夸脏哦", text = "夸脏哦", file = "Media\\Voice\\kua_zang_o.ogg" },
+    { id = "mei_guan_xi_ge_ge", label = "没关系哥哥", text = "没关系哥哥", file = "Media\\Voice\\mei_guan_xi_ge_ge.ogg" },
+    { id = "zhen_bang", label = "真棒", text = "真棒", file = "Media\\Voice\\zhen_bang.ogg" },
 }
 
 local DEFAULT_SLOT_IDS = {
