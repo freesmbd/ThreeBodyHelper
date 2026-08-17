@@ -51,6 +51,7 @@ local DEFAULTS = {
     scale = 1.0,
     pointX = 0,
     pointY = 0,
+    moveUnlocked = false,
     phrases = PHRASE_CATALOG,
 }
 
@@ -333,11 +334,15 @@ wheel:SetScript("OnMouseDown", function(_, button)
     end
 end)
 wheel:SetScript("OnDragStart", function()
-    wheel:StartMoving()
+    if db and db.moveUnlocked then
+        wheel:StartMoving()
+    end
 end)
 wheel:SetScript("OnDragStop", function()
-    wheel:StopMovingOrSizing()
-    SaveWheelPosition()
+    if db and db.moveUnlocked then
+        wheel:StopMovingOrSizing()
+        SaveWheelPosition()
+    end
 end)
 wheel:Hide()
 
@@ -354,7 +359,7 @@ wheel.centerText:SetText("语音轮盘")
 
 wheel.centerSubText = wheel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     wheel.centerSubText:SetPoint("TOP", wheel.centerText, "BOTTOM", 0, -8)
-wheel.centerSubText:SetText("点击发送，拖动改位置，右键关闭")
+wheel.centerSubText:SetText("点击发送，配置里解锁移动，右键关闭")
 
 local function HighlightSelected(index)
     selectedIndex = index
@@ -587,6 +592,11 @@ function VoiceWheel.ResetPosition(resetScale)
     Print("voice wheel layout reset")
 end
 
+function VoiceWheel.SetMoveUnlocked(value)
+    db.moveUnlocked = value and true or false
+    Print("voice wheel movement: " .. (db.moveUnlocked and "unlocked" or "locked"))
+end
+
 local TEXT_CHANNEL_OPTIONS = { "AUTO", "SAY", "PARTY", "RAID", "INSTANCE_CHAT", "GUILD" }
 local SOUND_CHANNEL_OPTIONS = { "Dialog", "Master", "SFX", "Music", "Ambience" }
 
@@ -670,7 +680,7 @@ local function EnsureOptionsFrame()
     end
 
     optionsFrame = CreateFrame("Frame", "ThreeBodyHelperVoiceOptionsFrame", UIParent, "BasicFrameTemplateWithInset")
-    optionsFrame:SetSize(390, 470)
+    optionsFrame:SetSize(390, 520)
     optionsFrame:SetPoint("CENTER")
     optionsFrame:SetFrameStrata("DIALOG")
     optionsFrame:EnableMouse(true)
@@ -712,37 +722,43 @@ local function EnsureOptionsFrame()
         db.selfPlay = value and true or false
     end)
 
-    CreateOptionsCycleButton(optionsFrame, "文字频道", -196, function()
+    CreateOptionsCheckbox(optionsFrame, "解锁轮盘移动", -184, function()
+        return db.moveUnlocked
+    end, function(value)
+        VoiceWheel.SetMoveUnlocked(value)
+    end)
+
+    CreateOptionsCycleButton(optionsFrame, "文字频道", -230, function()
         return db.textChannel or DEFAULTS.textChannel
     end, function(current)
         db.textChannel = NextOption(TEXT_CHANNEL_OPTIONS, current)
     end)
 
-    CreateOptionsCycleButton(optionsFrame, "声音通道", -230, function()
+    CreateOptionsCycleButton(optionsFrame, "声音通道", -264, function()
         return db.soundChannel or DEFAULTS.soundChannel
     end, function(current)
         db.soundChannel = NextOption(SOUND_CHANNEL_OPTIONS, current)
     end)
 
-    CreateOptionsNumber(optionsFrame, "轮盘缩放", -276, function()
+    CreateOptionsNumber(optionsFrame, "轮盘缩放", -310, function()
         return db.scale or DEFAULTS.scale
     end, function(value)
         VoiceWheel.SetScale(value)
     end)
 
-    CreateOptionsNumber(optionsFrame, "发送冷却", -310, function()
+    CreateOptionsNumber(optionsFrame, "发送冷却", -344, function()
         return db.sendCooldown or DEFAULTS.sendCooldown
     end, function(value)
         VoiceWheel.SetCooldown("send", value)
     end)
 
-    CreateOptionsNumber(optionsFrame, "全局接收冷却", -344, function()
+    CreateOptionsNumber(optionsFrame, "全局接收冷却", -378, function()
         return db.globalReceiveCooldown or DEFAULTS.globalReceiveCooldown
     end, function(value)
         VoiceWheel.SetCooldown("global", value)
     end)
 
-    CreateOptionsNumber(optionsFrame, "单人接收冷却", -378, function()
+    CreateOptionsNumber(optionsFrame, "单人接收冷却", -412, function()
         return db.senderReceiveCooldown or DEFAULTS.senderReceiveCooldown
     end, function(value)
         VoiceWheel.SetCooldown("sender", value)
@@ -877,6 +893,7 @@ function VoiceWheel.HandleSlash(input)
         Print("pack=" .. tostring(db.packId or DEFAULTS.packId))
         Print("text channel=" .. tostring(db.textChannel or "AUTO"))
         Print("sound channel=" .. tostring(db.soundChannel or DEFAULTS.soundChannel))
+        Print("movement=" .. (db.moveUnlocked and "unlocked" or "locked"))
         Print("layout: scale=" .. tostring(db.scale or DEFAULTS.scale)
             .. ", center=" .. tostring(db.pointX or 0) .. "," .. tostring(db.pointY or 0))
         Print("cooldowns: send=" .. tostring(db.sendCooldown)
@@ -926,6 +943,22 @@ function VoiceWheel.HandleSlash(input)
         return
     end
 
+    if command == "unlock" or command == "unlockmove" then
+        VoiceWheel.SetMoveUnlocked(true)
+        return
+    end
+
+    if command == "lock" or command == "lockmove" then
+        if rest == "off" then
+            VoiceWheel.SetMoveUnlocked(true)
+        elseif rest == "on" or rest == "" then
+            VoiceWheel.SetMoveUnlocked(false)
+        else
+            Print("voice wheel movement: " .. (db.moveUnlocked and "unlocked" or "locked"))
+        end
+        return
+    end
+
     if command == "cooldown" or command == "cd" then
         local kind, seconds = rest:match("^(%S+)%s+(%S+)$")
         VoiceWheel.SetCooldown(string.lower(kind or ""), seconds)
@@ -942,6 +975,7 @@ function VoiceWheel.HandleSlash(input)
     Print("/mqq voice list - show phrase ids and local files")
     Print("/mqq voice scale 0.6-1.6 - set wheel scale")
     Print("/mqq voice pos x y - set wheel center offset")
+    Print("/mqq voice unlock|lock - allow/block dragging the wheel")
     Print("/mqq voice center|resetpos|resetlayout - reset layout")
     Print("/mqq voice cooldown global|sender|send seconds")
     Print("/mqq voice send 1-8 - trigger a phrase")

@@ -61,6 +61,8 @@ Useful commands:
 /mqq voice list
 /mqq voice scale 0.6-1.6
 /mqq voice pos x y
+/mqq voice unlock
+/mqq voice lock
 /mqq voice center
 /mqq voice resetpos
 /mqq voice resetlayout
@@ -68,13 +70,13 @@ Useful commands:
 /mqq voice cooldown global|sender|send seconds
 ```
 
-The settings panel covers the same core options as the commands: receive sync, send sync, chat text, text channel, sound channel, scale, layout reset, and cooldowns.
+The settings panel covers the same core options as the commands: receive sync, send sync, chat text, text channel, sound channel, movement lock, scale, layout reset, and cooldowns.
 
 `/mqq voice text ...` controls the single selected channel used for normal chat text when a wheel entry is sent. Addon sync still uses party/raid/instance addon messages so teammates with the same addon can play local audio.
 
 Custom voice playback defaults to the WoW `Dialog` sound channel. `/mqq voice sound ...` changes the saved playback channel for custom files and built-in fallback sound kits.
 
-The wheel position and scale are saved per account. Drag the wheel background to move it, or use `pos x y` to set its center offset from screen center. `resetpos` only recenters the wheel; `resetlayout` resets both position and scale.
+The wheel position and scale are saved per account. Wheel dragging is locked by default; unlock movement in the settings panel or with `/mqq voice unlock`, then drag the wheel background to move it. Use `/mqq voice lock` after placement. `pos x y` sets its center offset from screen center. `resetpos` only recenters the wheel; `resetlayout` resets both position and scale.
 
 ## Custom Voice Files
 
