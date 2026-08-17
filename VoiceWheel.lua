@@ -426,7 +426,6 @@ local function HighlightSelected(index)
     for i, button in ipairs(buttons) do
         if i == index then
             button:SetAlpha(1)
-            button:SetScale(1.08)
             if button.bg then
                 button.bg:SetColorTexture(0.08, 0.15, 0.22, 0.86)
             end
@@ -435,7 +434,6 @@ local function HighlightSelected(index)
             end
         else
             button:SetAlpha(0.78)
-            button:SetScale(1)
             if button.bg then
                 button.bg:SetColorTexture(0.02, 0.02, 0.02, 0.62)
             end
