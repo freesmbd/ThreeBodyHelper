@@ -406,20 +406,6 @@ wheel:SetScript("OnDragStop", function()
 end)
 wheel:Hide()
 
-wheel.centerCore = wheel:CreateTexture(nil, "BACKGROUND")
-wheel.centerCore:SetPoint("CENTER", 0, 0)
-wheel.centerCore:SetSize(220, 220)
-wheel.centerCore:SetTexture("Interface\\Cooldown\\star4")
-wheel.centerCore:SetBlendMode("BLEND")
-wheel.centerCore:SetVertexColor(0.02, 0.04, 0.10, 0.34)
-
-wheel.centerGlow = wheel:CreateTexture(nil, "BACKGROUND")
-wheel.centerGlow:SetPoint("CENTER", 0, 0)
-wheel.centerGlow:SetSize(286, 286)
-wheel.centerGlow:SetTexture("Interface\\Cooldown\\star4")
-wheel.centerGlow:SetBlendMode("ADD")
-wheel.centerGlow:SetVertexColor(0.15, 0.36, 0.72, 0.10)
-
 wheel.centerText = wheel:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
 wheel.centerText:SetPoint("CENTER", 0, 0)
 wheel.centerText:SetWidth(220)
@@ -433,7 +419,7 @@ wheel.centerText:SetText("语音轮盘")
 
 wheel.centerSubText = wheel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     wheel.centerSubText:SetPoint("TOP", wheel.centerText, "BOTTOM", 0, -8)
-wheel.centerSubText:SetText("点击发送，配置里解锁移动，右键关闭")
+wheel.centerSubText:SetText("左键发送，右键取消")
 
 local function SetButtonBorder(button, r, g, b, a)
     if not button or not button.border then
@@ -471,13 +457,6 @@ local function HighlightSelected(index)
 
     local phrase = index and GetSlotPhrase(index)
     wheel.centerText:SetText((phrase and (phrase.text or phrase.label or phrase.id)) or "语音轮盘")
-    if wheel.centerGlow then
-        if phrase then
-            wheel.centerGlow:SetVertexColor(0.95, 0.72, 0.26, 0.18)
-        else
-            wheel.centerGlow:SetVertexColor(0.15, 0.36, 0.72, 0.10)
-        end
-    end
 end
 
 local function LayoutButtons()

@@ -2,7 +2,7 @@
 ## Title: ThreeBodyHelper
 ## Notes: Lightweight raid social helper for ThreeBody.
 ## Author: truemjfans, Mqq-tect
-## Version: 0.3.5
+## Version: 0.3.6
 ## SavedVariables: ThreeBodyHelperDB
 
 ThreeBodyHelper.lua
