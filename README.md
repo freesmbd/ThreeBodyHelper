@@ -76,7 +76,7 @@ The settings panel covers the same core options as the commands: receive sync, s
 
 Custom voice playback defaults to the WoW `Dialog` sound channel. `/mqq voice sound ...` changes the saved playback channel for custom files and built-in fallback sound kits.
 
-The wheel position and scale are saved per account. Wheel dragging is locked by default; unlock movement in the settings panel or with `/mqq voice unlock`, then drag the wheel background to move it. Use `/mqq voice lock` after placement. `pos x y` sets its center offset from screen center. `resetpos` only recenters the wheel; `resetlayout` resets both position and scale.
+The wheel position and scale are saved per account. Wheel dragging is locked by default. Unlock movement in the settings panel or with `/mqq voice unlock`; this opens the wheel immediately for placement. Locking movement saves the current wheel position and hides it. `pos x y` sets its center offset from screen center. `resetpos` only recenters the wheel; `resetlayout` resets both position and scale.
 
 ## Custom Voice Files
 

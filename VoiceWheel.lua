@@ -594,6 +594,12 @@ end
 
 function VoiceWheel.SetMoveUnlocked(value)
     db.moveUnlocked = value and true or false
+    if db.moveUnlocked then
+        VoiceWheel.Show()
+    elseif wheel:IsShown() then
+        SaveWheelPosition()
+        VoiceWheel.Hide()
+    end
     Print("voice wheel movement: " .. (db.moveUnlocked and "unlocked" or "locked"))
 end
 
